@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Developer tool: runs the package against the real dev tenant so its code can be debugged step by step.
+       Never packed, never deployed. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <!-- Same store as ClaimApi's ModularMonolith project: the PartnerUsers:* dev tenant values set for the API are
+         reused as they are. -->
+    <UserSecretsId>4d918d49-a850-467b-bc3c-ea9ef3d48554</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The project, not the package: breakpoints work anywhere in the package's source. -->
+    <ProjectReference Include="..\..\src\ClaimPartners.Users\ClaimPartners.Users.csproj" />
+  </ItemGroup>
+
+</Project>
