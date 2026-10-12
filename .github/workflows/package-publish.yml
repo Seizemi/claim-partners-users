@@ -1,0 +1,55 @@
+# Publishes ClaimPartners.Users to GitHub Packages when a tag "pkg-v<version>" is pushed:
+#   git tag pkg-v1.0.0        (release)
+#   git tag pkg-v1.1.0-rc.1   (prerelease, to try a change from ClaimApi before releasing it)
+#   git push origin <tag>
+# The package version is the tag without "pkg-v". Published versions are immutable: never reuse a tag.
+name: package-publish
+
+on:
+  push:
+    tags:
+      - "pkg-v*"
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  FEED_URL: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Read the version from the tag
+        id: version
+        run: |
+          version="${GITHUB_REF_NAME#pkg-v}"
+          # SemVer 2.0: 1.2.3 or 1.2.3-rc.1
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Tag '$GITHUB_REF_NAME' is not pkg-v<semver> (for example pkg-v1.0.0 or pkg-v1.1.0-rc.1)."
+            exit 1
+          fi
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Test
+        run: dotnet test ClaimPartners.Users.sln -c Release
+
+      - name: Pack
+        run: >
+          dotnet pack src/ClaimPartners.Users -c Release -o artifacts
+          -p:Version=${{ steps.version.outputs.value }}
+
+      # GitHub Packages doesn't accept symbol packages: only the .nupkg is pushed.
+      - name: Push to GitHub Packages
+        run: >
+          dotnet nuget push "artifacts/*.nupkg"
+          --source "$FEED_URL"
+          --api-key "${{ secrets.GITHUB_TOKEN }}"
+          --no-symbols
