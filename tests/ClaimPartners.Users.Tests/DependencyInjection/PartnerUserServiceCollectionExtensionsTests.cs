@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
+using Moq;
 
 namespace ClaimPartners.Users.Tests.DependencyInjection;
 
@@ -56,12 +57,45 @@ public sealed class PartnerUserServiceCollectionExtensionsTests
         Assert.Contains("GraphClientSecret", exception.Message);
     }
 
-    private static ServiceProvider BuildProvider(Dictionary<string, string?> values)
+    [Fact]
+    public void AddPartnerUserManagement_WithClientAssertionsAndNoSecret_ResolvesTheServiceWithTheHostProvider()
+    {
+        var configuration = TestOptions.AsConfiguration();
+        configuration.Remove("PartnerUsers:GraphClientSecret");
+        var assertionProvider = new Mock<IGraphClientAssertionProvider>().Object;
+        IServiceProvider? factoryArgument = null;
+        using var provider = BuildProvider(configuration, serviceProvider =>
+        {
+            factoryArgument = serviceProvider;
+            return assertionProvider;
+        });
+
+        provider.GetRequiredService<IStartupValidator>().Validate();
+        provider.GetRequiredService<IPartnerUserService>();
+
+        Assert.NotNull(factoryArgument);
+    }
+
+    [Fact]
+    public void AddPartnerUserManagement_WithClientAssertionsAndASecret_FailsAtStartup()
+    {
+        using var provider = BuildProvider(TestOptions.AsConfiguration(), _ => new Mock<IGraphClientAssertionProvider>().Object);
+
+        var exception = Assert.Throws<OptionsValidationException>(() => provider.GetRequiredService<IStartupValidator>().Validate());
+
+        Assert.Contains("must be empty when the host supplies client assertions", exception.Message);
+    }
+
+    private static ServiceProvider BuildProvider(
+        Dictionary<string, string?> values,
+        Func<IServiceProvider, IGraphClientAssertionProvider>? clientAssertionProviderFactory = null)
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(values).Build();
-        return new ServiceCollection()
-            .AddLogging()
-            .AddPartnerUserManagement(configuration)
+        var services = new ServiceCollection().AddLogging();
+
+        return (clientAssertionProviderFactory is null
+                ? services.AddPartnerUserManagement(configuration)
+                : services.AddPartnerUserManagement(configuration, clientAssertionProviderFactory))
             .BuildServiceProvider();
     }
 }

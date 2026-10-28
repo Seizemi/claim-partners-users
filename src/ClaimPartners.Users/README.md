@@ -27,6 +27,16 @@ Then inject `ClaimPartners.Users.Core.IPartnerUserService`.
 
 Exactly one of `GraphClientSecret` or `GraphCertificateThumbprint` must be set. Invalid settings stop the host at startup. Unknown keys (for example the host's `AssignableRoles`) are ignored.
 
+### Client assertions supplied by the host (since 1.1.0)
+
+When the certificate isn't in a local store (for example in Azure Key Vault, read with a managed identity), the host signs the client assertions itself:
+
+```csharp
+builder.Services.AddPartnerUserManagement(builder.Configuration, serviceProvider => new MyAssertionProvider(...));
+```
+
+`Configuration.IGraphClientAssertionProvider.GetAssertionAsync(clientId, audience, cancellationToken)` returns a JWT (RFC 7523) signed with a certificate registered on the Graph app registration: issuer and subject `clientId`, audience `audience` (the external tenant's token endpoint). It is called each time a Graph token is requested (about once an hour). The package still builds the credential for its own `TenantId` and `GraphClientId`. `GraphClientSecret` and `GraphCertificateThumbprint` must then be empty.
+
 App role IDs are not configured. The first operation that needs them reads the web app's enabled app roles from Graph (`GET /servicePrincipals/{AppServicePrincipalId}?$select=appRoles`) and keeps them, matched by **value** (`Supervisor`, `Agent`, ...), for the lifetime of the application. A role added or renamed in Entra is seen after a restart. If that read fails, the operation fails with `GraphError` and the next one tries again.
 
 The Graph app registration needs these **application** permissions, with admin consent: `User.ReadWrite.All`, `AppRoleAssignment.ReadWrite.All`, `Application.Read.All`.

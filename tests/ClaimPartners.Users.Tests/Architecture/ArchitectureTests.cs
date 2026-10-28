@@ -54,6 +54,7 @@ public sealed class ArchitectureTests
     {
         string[] expected =
         [
+            "ClaimPartners.Users.Configuration.IGraphClientAssertionProvider",
             "ClaimPartners.Users.Configuration.PartnerUserOptions",
             "ClaimPartners.Users.Core.CreatePartnerUserRequest",
             "ClaimPartners.Users.Core.IPartnerUserService",

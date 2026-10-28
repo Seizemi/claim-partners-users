@@ -11,8 +11,13 @@ namespace ClaimPartners.Users.Providers.Graph;
 /// </summary>
 internal static class GraphCredentialFactory
 {
-    public static TokenCredential Create(PartnerUserOptions options)
+    public static TokenCredential Create(PartnerUserOptions options, IGraphClientAssertionProvider? clientAssertionProvider = null)
     {
+        if (clientAssertionProvider is not null)
+        {
+            return new ClientAssertionCredential(options.TenantId, options.GraphClientId, AssertionCallback(options, clientAssertionProvider));
+        }
+
         if (!string.IsNullOrWhiteSpace(options.GraphClientSecret))
         {
             return new ClientSecretCredential(options.TenantId, options.GraphClientId, options.GraphClientSecret);
@@ -20,6 +25,13 @@ internal static class GraphCredentialFactory
 
         var certificate = FindCertificate(options.GraphCertificateThumbprint!);
         return new ClientCertificateCredential(options.TenantId, options.GraphClientId, certificate);
+    }
+
+    // The assertion targets the endpoint the credential requests tokens from (default authority host).
+    internal static Func<CancellationToken, Task<string>> AssertionCallback(PartnerUserOptions options, IGraphClientAssertionProvider clientAssertionProvider)
+    {
+        var audience = new Uri(AzureAuthorityHosts.AzurePublicCloud, $"{options.TenantId}/oauth2/v2.0/token").ToString();
+        return cancellationToken => clientAssertionProvider.GetAssertionAsync(options.GraphClientId, audience, cancellationToken);
     }
 
     private static X509Certificate2 FindCertificate(string thumbprint)

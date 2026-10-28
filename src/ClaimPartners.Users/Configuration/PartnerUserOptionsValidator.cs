@@ -2,7 +2,10 @@ using Microsoft.Extensions.Options;
 
 namespace ClaimPartners.Users.Configuration;
 
-internal sealed class PartnerUserOptionsValidator : IValidateOptions<PartnerUserOptions>
+/// <param name="usesClientAssertion">
+/// True when the host supplies client assertions: the secret and the thumbprint must then both be empty.
+/// </param>
+internal sealed class PartnerUserOptionsValidator(bool usesClientAssertion = false) : IValidateOptions<PartnerUserOptions>
 {
     public ValidateOptionsResult Validate(string? name, PartnerUserOptions options)
     {
@@ -19,7 +22,14 @@ internal sealed class PartnerUserOptionsValidator : IValidateOptions<PartnerUser
 
         var hasSecret = !string.IsNullOrWhiteSpace(options.GraphClientSecret);
         var hasCertificate = !string.IsNullOrWhiteSpace(options.GraphCertificateThumbprint);
-        if (hasSecret == hasCertificate)
+        if (usesClientAssertion)
+        {
+            if (hasSecret || hasCertificate)
+            {
+                failures.Add($"{PartnerUserOptions.SectionName}: {nameof(options.GraphClientSecret)} and {nameof(options.GraphCertificateThumbprint)} must be empty when the host supplies client assertions.");
+            }
+        }
+        else if (hasSecret == hasCertificate)
         {
             failures.Add($"{PartnerUserOptions.SectionName}: exactly one of {nameof(options.GraphClientSecret)} or {nameof(options.GraphCertificateThumbprint)} must be set.");
         }
