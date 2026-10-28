@@ -42,6 +42,32 @@ public sealed class PartnerUserOptionsValidatorTests
         Assert.Contains("exactly one of GraphClientSecret or GraphCertificateThumbprint", result.FailureMessage);
     }
 
+    [Fact]
+    public void Validate_ClientAssertionWithoutSecretNorThumbprint_Succeeds()
+    {
+        var options = TestOptions.Create();
+        options.GraphClientSecret = null;
+
+        var result = new PartnerUserOptionsValidator(usesClientAssertion: true).Validate(null, options);
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Theory]
+    [InlineData("secret", null)]
+    [InlineData(null, "ABCDEF0123456789")]
+    public void Validate_ClientAssertionWithSecretOrThumbprint_Fails(string? secret, string? thumbprint)
+    {
+        var options = TestOptions.Create();
+        options.GraphClientSecret = secret;
+        options.GraphCertificateThumbprint = thumbprint;
+
+        var result = new PartnerUserOptionsValidator(usesClientAssertion: true).Validate(null, options);
+
+        Assert.True(result.Failed);
+        Assert.Contains("must be empty when the host supplies client assertions", result.FailureMessage);
+    }
+
     [Theory]
     [InlineData(nameof(PartnerUserOptions.TenantId), "")]
     [InlineData(nameof(PartnerUserOptions.TenantId), "claimdev")]

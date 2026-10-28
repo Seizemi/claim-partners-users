@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>ClaimPartners.Users</PackageId>
-    <Version>1.0.0</Version>                      <!-- overridden by CI from the git tag (package-publish.yml) -->
+    <Version>1.1.0</Version>                      <!-- overridden by CI from the git tag (package-publish.yml) -->
     <Authors>Maxime Delobelle</Authors>
     <Description>Partner user management on Microsoft Entra External ID via Microsoft Graph.</Description>
     <PackageTags>entra;external-id;microsoft-graph;users</PackageTags>
